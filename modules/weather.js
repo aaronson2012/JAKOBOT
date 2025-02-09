@@ -4,6 +4,42 @@ import cron from 'node-cron';
 import axios from 'axios';
 import moment from 'moment-timezone';
 
+const weatherDescriptionEmojis = {
+  'clear sky': '☀️',
+  'few clouds': '🌤️',
+  'scattered clouds': '☁️',
+  'broken clouds': '🌥️',
+  'shower rain': '🌦️',
+  'rain': '🌧️',
+  'thunderstorm': '⛈️',
+  'snow': '❄️',
+  'mist': '🌫️',
+  'overcast clouds': '☁️', // Added overcast clouds
+  'light snow': '🌨️',
+};
+
+const temperatureEmojis = {
+  'hot': '🔥',
+  'warm': '☀️',
+  'moderate': '🌡️',
+  'cool': '🍃',
+  'cold': '🥶',
+  'freezing': '❄️',
+};
+
+const humidityEmojis = {
+  'high': '💦',
+  'moderate': '💧',
+  'low': '🏜️',
+};
+
+const windSpeedEmojis = {
+  'high': '🌪️',
+  'moderate': '💨',
+  'breezy': '🌬️',
+  'calm': '🍃',
+};
+
 const WEATHER_API_KEY = process.env.WEATHER_API_KEY;
 const WEATHER_CITY = process.env.WEATHER_CITY;
 const WEATHER_TIMEZONE = process.env.WEATHER_TIMEZONE; // New env variable for timezone
@@ -80,14 +116,40 @@ function formatForecastData(rawForecastData, timezone) {
       let avgTemp = period.forecasts.reduce((sum, f) => sum + f.temperature, 0) / period.forecasts.length;
       avgTemp = parseFloat(avgTemp.toFixed(1)); // Round to one decimal place
       const representativeForecast = period.forecasts[Math.floor(period.forecasts.length / 2)]; // Pick middle forecast as representative
+      
+      // Determine emojis based on weather conditions
+      const descriptionEmoji = weatherDescriptionEmojis[representativeForecast.description] || '';
+      let temperatureEmoji = '';
+      if (avgTemp > 90) temperatureEmoji = temperatureEmojis.hot;
+      else if (avgTemp > 75) temperatureEmoji = temperatureEmojis.warm;
+      else if (avgTemp > 60) temperatureEmoji = temperatureEmojis.moderate;
+      else if (avgTemp > 45) temperatureEmoji = temperatureEmojis.cool;
+      else if (avgTemp > 32) temperatureEmoji = temperatureEmojis.cold;
+      else temperatureEmoji = temperatureEmojis.freezing;
+
+      let humidityEmoji = '';
+      if (representativeForecast.humidity > 80) humidityEmoji = humidityEmojis.high;
+      else if (representativeForecast.humidity > 50) humidityEmoji = humidityEmojis.moderate;
+      else humidityEmoji = humidityEmojis.low;
+
+      let windSpeedEmoji = '';
+      if (representativeForecast.wind_speed > 30) windSpeedEmoji = windSpeedEmojis.high;
+      else if (representativeForecast.wind_speed > 15) windSpeedEmoji = windSpeedEmojis.moderate;
+      else if (representativeForecast.wind_speed > 5) windSpeedEmoji = windSpeedEmojis.breezy;
+      else windSpeedEmoji = windSpeedEmojis.calm;
+
       periodSummaries[periodName] = {
         emoji: period.emoji,
         time: periodName.charAt(0).toUpperCase() + periodName.slice(1), // Capitalize period name
         temperature: avgTemp,
+        temperatureEmoji: temperatureEmoji,
         description: representativeForecast.description,
+        descriptionEmoji: descriptionEmoji,
         icon: representativeForecast.icon,
         humidity: representativeForecast.humidity,
-        wind_speed: representativeForecast.wind_speed
+        humidityEmoji: humidityEmoji,
+        wind_speed: representativeForecast.wind_speed,
+        windSpeedEmoji: windSpeedEmoji
       };
     } else {
       periodSummaries[periodName] = {
@@ -138,7 +200,7 @@ export const command = {
           forecastEmbed.addFields(
             {
               name: `${period.time} ${period.emoji}`, // Period name with emoji
-              value: `**Temperature:** ${period.temperature}°F\n**Description:** ${period.description}\n**Humidity:** ${period.humidity}%\n**Wind Speed:** ${period.wind_speed} mph`,
+              value: `* **Temp:** ${period.temperature}°F ${period.temperatureEmoji || ''}\n* **Description:** ${period.description} ${period.descriptionEmoji || ''}\n* **Humidity:** ${period.humidity}% ${period.humidityEmoji || ''}\n* **Wind Speed:** ${period.wind_speed} mph ${period.windSpeedEmoji || ''}`,
               inline: true,
             },
           );
@@ -214,7 +276,7 @@ export const setupWeatherCron = async (client) => {
       if (period.description !== "Not available") {
         forecastEmbed.addFields({
           name: `${period.time} ${period.emoji}`, // Period name with emoji
-          value: `**Temperature:** ${period.temperature}°F\n**Description:** ${period.description}\n**Humidity:** ${period.humidity}%\n**Wind Speed:** ${period.wind_speed} mph`,
+          value: `* **Temp:** ${period.temperature}°F ${period.temperatureEmoji || ''}\n* **Description:** ${period.description} ${period.descriptionEmoji || ''}\n* **Humidity:** ${period.humidity}% ${period.humidityEmoji || ''}\n* **Wind Speed:** ${period.wind_speed} mph ${period.windSpeedEmoji || ''}`,
           inline: true
         });
       } else {
