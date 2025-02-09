@@ -27,12 +27,9 @@ for (const file of moduleFiles) {
 	import(filePath)
     .then(module => {
         modules.push(module);
-        if (module.command && module.command.slashCommand && module.command.name !== 'weather') { // Exclude weather command here
+        if (module.command && module.command.slashCommand) {
             commands.push(module.command.slashCommand.data.toJSON());
             moduleCommands[module.command.name] = module.command.slashCommand; // Store command
-            console.log(`Loaded module: ${module.command.name}`);
-        } else if (module.command && module.command.name === 'weather') {
-            moduleCommands[module.command.name] = module.command.slashCommand; // Store weather command for later modification
             console.log(`Loaded module: ${module.command.name}`);
         } else {
             console.log(`Loaded module without slash command: ${module.command.name}`);
@@ -42,13 +39,6 @@ for (const file of moduleFiles) {
         console.error(`Error loading module from ${filePath}: ${error}`);
     });
 }
-
-// Modify weather command to be top-level and push it to commands array
-weatherCommand.slashCommand.data = new SlashCommandBuilder()
-    .setName('weather')
-    .setDescription('Fetches current weather immediately.');
-commands.push(weatherCommand.slashCommand.data.toJSON());
-moduleCommands['weather'] = weatherCommand.slashCommand;
 
 
 // When the client is ready, run this code
@@ -72,11 +62,7 @@ client.on('ready', async () => {
         console.error(error);
     }
 
-    // Setup weather cron job on bot ready
-    if (weatherCronJob) { // Stop existing job if it exists
-        weatherCronJob.stop();
-    }
-    weatherCronJob = setupWeatherCron(client); // Store cron job instance
+    setupWeatherCron(client); // Setup weather cron job on bot ready
 });
 
 // Log in to Discord with your client's token
