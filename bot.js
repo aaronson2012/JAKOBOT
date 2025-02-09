@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'url';
 import { REST } from '@discordjs/rest';
 import { setupWeatherCron, command as weatherCommand } from './modules/weather.js'; // Import weather cron setup and command
+import { command as coinflipCommand } from './modules/coinflip.js'; // Import coinflip command
 
 const token = process.env.BOT_TOKEN;
 
